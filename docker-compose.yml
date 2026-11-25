@@ -1,0 +1,133 @@
+# Seguros BPO v2 - levantar todo:  docker compose up --build
+# Orden: mysql -> eureka -> auth / liquidador / usuario / analista -> api-gateway
+name: seguros-bpo-v2
+
+x-servicio: &servicio
+  restart: unless-stopped
+  networks: [bpo-red]
+
+services:
+
+  mysql:
+    image: mysql:8.4
+    container_name: bpo-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: America/Santiago
+    ports:
+      - "3307:3306"          # 3307 en tu PC para no chocar con un MySQL local
+    volumes:
+      - mysql-datos:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # Por TCP: durante la inicializacion MySQL no escucha en red, asi esperamos a que termine init.sql
+      test: ["CMD-SHELL", "mysql -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD} -e 'USE liquidador_db' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    networks: [bpo-red]
+
+  eureka-server:
+    <<: *servicio
+    build: ./eureka-server
+    container_name: bpo-eureka
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8761'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 15s
+
+  auth-service:
+    <<: *servicio
+    build: ./auth-service
+    container_name: bpo-auth
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/auth_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Santiago
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      EUREKA_URL: http://eureka-server:8761/eureka/
+    ports:
+      - "8081:8081"          # opcional: Swagger directo
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  liquidador-service:
+    <<: *servicio
+    build: ./liquidador-service
+    container_name: bpo-liquidador
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/liquidador_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Santiago
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      EUREKA_URL: http://eureka-server:8761/eureka/
+    ports:
+      - "8084:8084"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  usuario-service:
+    <<: *servicio
+    build: ./usuario-service
+    container_name: bpo-usuario
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      EUREKA_URL: http://eureka-server:8761/eureka/
+    ports:
+      - "8083:8083"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+
+  analista-service:
+    <<: *servicio
+    build: ./analista-service
+    container_name: bpo-analista
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      EUREKA_URL: http://eureka-server:8761/eureka/
+    ports:
+      - "8085:8085"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+
+  api-gateway:
+    <<: *servicio
+    build: ./api-gateway
+    container_name: bpo-gateway
+    environment:
+      EUREKA_URL: http://eureka-server:8761/eureka/
+    ports:
+      - "8090:8090"          # la app Android usa http://10.0.2.2:8090/
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      liquidador-service:
+        condition: service_started
+      usuario-service:
+        condition: service_started
+      analista-service:
+        condition: service_started
+
+networks:
+  bpo-red:
+
+volumes:
+  mysql-datos:

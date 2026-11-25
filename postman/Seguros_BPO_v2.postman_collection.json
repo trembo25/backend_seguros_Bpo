@@ -1,0 +1,2422 @@
+{
+  "info": {
+    "name": "Seguros BPO v2 - Microservicios",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Ejecuta las carpetas en orden: Auth primero (guarda los tokens) y luego Liquidador. Todo pasa por el gateway en el puerto 8080."
+  },
+  "item": [
+    {
+      "name": "1. Auth (via gateway)",
+      "item": [
+        {
+          "name": "1. POST registro (asegurado nuevo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/registro",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "registro"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Prueba Postman\",\n  \"rut\": \"{{nuevoRut}}\",\n  \"correo\": \"{{nuevoCorreo}}\",\n  \"contrasena\": \"Clave123!\",\n  \"respuesta1\": \"rocky\",\n  \"respuesta2\": \"santiago\",\n  \"respuesta3\": \"matrix\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('nuevoCorreo', 'prueba' + Date.now() + '@correo.ejemplo');",
+                  "pm.collectionVariables.set('nuevoRut', String(Math.floor(Math.random()*9000000)+1000000) + '-9');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Rol ASEGURADO', function () { pm.expect(pm.response.json().rol).to.eql('ASEGURADO'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. POST registro con clave debil (debe fallar)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/registro",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "registro"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"X\",\n  \"rut\": \"1-9\",\n  \"correo\": \"x@x.cl\",\n  \"contrasena\": \"abc\",\n  \"respuesta1\": \"a\",\n  \"respuesta2\": \"b\",\n  \"respuesta3\": \"c\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. POST registro duplicado (debe fallar)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/registro",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "registro"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Camila\",\n  \"rut\": \"15842371-5\",\n  \"correo\": \"camila.rojas@correo.ejemplo\",\n  \"contrasena\": \"Clave123!\",\n  \"respuesta1\": \"a\",\n  \"respuesta2\": \"b\",\n  \"respuesta3\": \"c\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 409', function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. POST login asegurado (guarda token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"camila.rojas@correo.ejemplo\",\n  \"contrasena\": \"Clave123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('tokenAsegurado', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. POST login liquidador (guarda token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"paulina.fernandez@andes-bpo.ejemplo\",\n  \"contrasena\": \"Clave123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('tokenLiquidador', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. POST login con clave incorrecta (debe fallar)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"camila.rojas@correo.ejemplo\",\n  \"contrasena\": \"mala\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7. GET me (usuario del token)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAsegurado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8. GET me sin token (debe fallar)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "9. GET usuario por id (liquidador puede ver a cualquiera)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/usuarios/4",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "usuarios",
+                "4"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Es liquidador', function () { pm.expect(pm.response.json().rol).to.eql('LIQUIDADOR'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "9b. GET mis propios datos por id (asegurado)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAsegurado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/usuarios/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "usuarios",
+                "1"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "9c. GET datos de OTRO usuario siendo asegurado (debe fallar)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAsegurado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/usuarios/4",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "usuarios",
+                "4"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10. POST recuperar/validar (respuestas del usuario nuevo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/recuperar/validar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "recuperar",
+                "validar"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{nuevoCorreo}}\",\n  \"respuesta1\": \"ROCKY\",\n  \"respuesta2\": \" santiago \",\n  \"respuesta3\": \"Matrix\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('resetToken', pm.response.json().resetToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11. POST recuperar/nueva-contrasena",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/recuperar/nueva-contrasena",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "recuperar",
+                "nueva-contrasena"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resetToken\": \"{{resetToken}}\",\n  \"nuevaContrasena\": \"Nueva456#\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12. POST login con la contrasena nueva",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{nuevoCorreo}}\",\n  \"contrasena\": \"Nueva456#\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('tokenNuevo', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13. PUT cambiar-contrasena",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenNuevo}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/cambiar-contrasena",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "cambiar-contrasena"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contrasenaActual\": \"Nueva456#\",\n  \"nuevaContrasena\": \"Otra789$\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14. PUT cambiar-contrasena con actual incorrecta (debe fallar)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenNuevo}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/cambiar-contrasena",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "cambiar-contrasena"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contrasenaActual\": \"incorrecta\",\n  \"nuevaContrasena\": \"Otra789$\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "2. Liquidador (via gateway)",
+      "item": [
+        {
+          "name": "1. GET panel del liquidador",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Es una lista', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. GET panel filtrado por estado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros?estado=EN_REVISION",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "EN_REVISION"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. POST crear siniestro (valida al asegurado en auth con Feign)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idAsegurado\": 2,\n  \"tipo\": \"Choque\",\n  \"descripcion\": \"Siniestro creado desde Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 201', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('numeroSiniestro', pm.response.json().numero);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. POST crear con un usuario que no es asegurado (debe fallar)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idAsegurado\": 4,\n  \"tipo\": \"Choque\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. POST crear con asegurado inexistente (debe fallar)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idAsegurado\": 999,\n  \"tipo\": \"Choque\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. GET detalle del siniestro creado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros/{{numeroSiniestro}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros",
+                "{{numeroSiniestro}}"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7. POST pedir documento (estado pasa a DOCUMENTACION_PENDIENTE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros/{{numeroSiniestro}}/documentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros",
+                "{{numeroSiniestro}}",
+                "documentos"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Parte policial\",\n  \"mensaje\": \"Adjunta el parte policial\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 201', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('idDocumento', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8. GET detalle (muestra documento pendiente)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros/{{numeroSiniestro}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros",
+                "{{numeroSiniestro}}"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Documentacion pendiente', function () { pm.expect(pm.response.json().estado).to.eql('DOCUMENTACION_PENDIENTE'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "9. PUT marcar documento como recibido (vuelve a EN_REVISION)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros/{{numeroSiniestro}}/documentos/{{idDocumento}}/recibido",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros",
+                "{{numeroSiniestro}}",
+                "documentos",
+                "{{idDocumento}}",
+                "recibido"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Vuelve a EN_REVISION', function () { pm.expect(pm.response.json().estado).to.eql('EN_REVISION'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10. POST pedir otro documento",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros/{{numeroSiniestro}}/documentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros",
+                "{{numeroSiniestro}}",
+                "documentos"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Fotos del dano\",\n  \"mensaje\": \"Adjunta fotos\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 201', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('idDocumento', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11. DELETE eliminar la solicitud de documento",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros/{{numeroSiniestro}}/documentos/{{idDocumento}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros",
+                "{{numeroSiniestro}}",
+                "documentos",
+                "{{idDocumento}}"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Sin documentos pendientes', function () { pm.expect(pm.response.json().estado).to.eql('EN_REVISION'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12. DELETE documento que no existe (debe fallar)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros/{{numeroSiniestro}}/documentos/99999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros",
+                "{{numeroSiniestro}}",
+                "documentos",
+                "99999"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13. PUT cambiar estado a EN_LIQUIDACION",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros/{{numeroSiniestro}}/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros",
+                "{{numeroSiniestro}}",
+                "estado"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"EN_LIQUIDACION\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14. PUT estado invalido (debe fallar)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros/{{numeroSiniestro}}/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros",
+                "{{numeroSiniestro}}",
+                "estado"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"INVENTADO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15. PUT cerrar siniestro (LIQUIDADO)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros/{{numeroSiniestro}}/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros",
+                "{{numeroSiniestro}}",
+                "estado"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"LIQUIDADO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "16. PUT cambiar un siniestro cerrado (debe fallar)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros/{{numeroSiniestro}}/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros",
+                "{{numeroSiniestro}}",
+                "estado"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"EN_REVISION\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 409', function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17. GET siniestro de otro liquidador (debe fallar)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros/SIN-2026-0003",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros",
+                "SIN-2026-0003"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "18. GET panel con token de asegurado (debe fallar)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAsegurado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "19. GET panel sin token (debe fallar)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/liquidador/siniestros",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidador",
+                "siniestros"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "3. Asegurado - usuario-service (via gateway)",
+      "description": "Solo ASEGURADO",
+      "item": [
+        {
+          "name": "0. POST login asegurado (Camila)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"camila.rojas@correo.ejemplo\",\n  \"contrasena\": \"Clave123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('tokenAsegurado', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1. GET mi perfil",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAsegurado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/asegurado/perfil",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asegurado",
+                "perfil"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Rol ASEGURADO', function () { pm.expect(pm.response.json().rol).to.eql('ASEGURADO'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. GET resumen de inicio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAsegurado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/asegurado/resumen",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asegurado",
+                "resumen"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. GET mis siniestros",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAsegurado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/asegurado/siniestros",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asegurado",
+                "siniestros"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Es lista', function () { pm.expect(pm.response.json()).to.be.an('array'); });",
+                  "if (pm.response.json().length) pm.collectionVariables.set('numeroSiniestro', pm.response.json()[0].numero);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. GET detalle de mi siniestro",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAsegurado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/asegurado/siniestros/{{numeroSiniestro}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asegurado",
+                "siniestros",
+                "{{numeroSiniestro}}"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. GET siniestro ajeno (debe fallar 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAsegurado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/asegurado/siniestros/SIN-2026-0002",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asegurado",
+                "siniestros",
+                "SIN-2026-0002"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. GET perfil con token de liquidador (debe fallar 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenLiquidador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/asegurado/perfil",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asegurado",
+                "perfil"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7. GET sin token (debe fallar 401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/asegurado/perfil",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asegurado",
+                "perfil"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Analista - analista-service (via gateway)",
+      "description": "Solo ANALISTA",
+      "item": [
+        {
+          "name": "0. POST login analista (Natalia)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"natalia.reyes@andes-bpo.ejemplo\",\n  \"contrasena\": \"Clave123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('tokenAnalista', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1. GET panel",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAnalista}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analista/panel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analista",
+                "panel"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Trae metricas', function () { pm.expect(pm.response.json().metricas.total).to.be.a('number'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. GET panel filtrado EN_REVISION",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAnalista}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analista/panel?estado=EN_REVISION",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analista",
+                "panel"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "EN_REVISION"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. GET siniestros",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAnalista}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analista/siniestros",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analista",
+                "siniestros"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. GET siniestros con estado invalido (debe fallar 400)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAnalista}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analista/siniestros?estado=CERRADO",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analista",
+                "siniestros"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "CERRADO"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. GET detalle SIN-2026-0001",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAnalista}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analista/siniestros/SIN-2026-0001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analista",
+                "siniestros",
+                "SIN-2026-0001"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. GET liquidadores",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAnalista}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analista/liquidadores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analista",
+                "liquidadores"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7. PUT asignar a Matias (id 5)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAnalista}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analista/siniestros/SIN-2026-0001/asignar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analista",
+                "siniestros",
+                "SIN-2026-0001",
+                "asignar"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idLiquidador\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Quedo con id 5', function () { pm.expect(pm.response.json().idLiquidador).to.eql(5); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8. PUT devolver a Paulina (id 4)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAnalista}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analista/siniestros/SIN-2026-0001/asignar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analista",
+                "siniestros",
+                "SIN-2026-0001",
+                "asignar"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idLiquidador\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "9. PUT asignar a un asegurado (debe fallar 400)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAnalista}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analista/siniestros/SIN-2026-0001/asignar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analista",
+                "siniestros",
+                "SIN-2026-0001",
+                "asignar"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idLiquidador\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10. GET panel con token de asegurado (debe fallar 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAsegurado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analista/panel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analista",
+                "panel"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11. GET auth/usuarios?rol=LIQUIDADOR",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAnalista}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/usuarios?rol=LIQUIDADOR",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "usuarios"
+              ],
+              "query": [
+                {
+                  "key": "rol",
+                  "value": "LIQUIDADOR"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Gateway",
+      "item": [
+        {
+          "name": "1. GET ruta que no existe en el gateway (debe fallar)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/otra/cosa",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "otra",
+                "cosa"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. GET Swagger unificado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v3/api-docs/swagger-config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v3",
+                "api-docs",
+                "swagger-config"
+              ],
+              "query": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": ""
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8090"
+    },
+    {
+      "key": "tokenAsegurado",
+      "value": ""
+    },
+    {
+      "key": "tokenLiquidador",
+      "value": ""
+    },
+    {
+      "key": "tokenNuevo",
+      "value": ""
+    },
+    {
+      "key": "resetToken",
+      "value": ""
+    },
+    {
+      "key": "numeroSiniestro",
+      "value": ""
+    },
+    {
+      "key": "idDocumento",
+      "value": ""
+    },
+    {
+      "key": "nuevoCorreo",
+      "value": ""
+    },
+    {
+      "key": "nuevoRut",
+      "value": ""
+    },
+    {
+      "key": "tokenAnalista",
+      "value": ""
+    }
+  ]
+}
