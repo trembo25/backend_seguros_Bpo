@@ -69,12 +69,17 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public LoginResponse login(LoginRequest r) {
-        Usuario u = usuarios.findByCorreo(r.correo().trim().toLowerCase(Locale.ROOT))
-                .filter(Usuario::isActivo)
-                .filter(x -> encoder.matches(r.contrasena(), x.getClaveHash()))
-                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Correo o contraseña incorrectos"));
-        return new LoginResponse(jwt.generarToken(u), UsuarioResponse.de(u));
+        public LoginResponse login(LoginRequest r) {
+            Usuario u = usuarios.findByCorreo(r.correo().trim().toLowerCase(Locale.ROOT))
+                    .filter(Usuario::isActivo)
+                    .filter(x -> encoder.matches(r.contrasena(), x.getClaveHash()))
+                    .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Correo o contraseña incorrectos"));
+
+            if (!"ACTIVO".equals(u.getEstado())) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "Tu cuenta está pendiente de aprobación por un analista");
+            }
+
+            return new LoginResponse(jwt.generarToken(u), UsuarioResponse.de(u));
     }
 
     // Paso 1 de recuperar: si las 3 respuestas coinciden, entrega un token corto
@@ -128,5 +133,18 @@ public class AuthService {
     public List<UsuarioResponse> listarPorRol(String rol) {
         return usuarios.findByRol_NombreAndActivoTrueOrderByNombreAsc(rol.trim().toUpperCase(Locale.ROOT))
                 .stream().map(UsuarioResponse::de).toList();
+    }
+    @Transactional(readOnly = true)
+    public List<UsuarioResponse> listarPendientes() {
+        return usuarios.findByEstadoOrderByNombreAsc("PENDIENTE")
+                .stream().map(UsuarioResponse::de).toList();
+    }
+
+    @Transactional
+    public UsuarioResponse aprobarUsuario(Long id) {
+        Usuario u = usuarios.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+        u.setEstado("ACTIVO");
+        return UsuarioResponse.de(usuarios.save(u));
     }
 }

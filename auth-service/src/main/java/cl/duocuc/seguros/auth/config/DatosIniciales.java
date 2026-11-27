@@ -50,6 +50,7 @@ public class DatosIniciales implements CommandLineRunner {
     private void crear(String nombre, String rut, String correo, String rol) {
         Rol r = roles.findByNombre(rol).orElseThrow();
         Usuario u = new Usuario(nombre, rut, correo, encoder.encode("Clave123"), r);
+        u.setEstado("ACTIVO");
         // Respuestas de seguridad de ejemplo: "demo" en las tres preguntas
         String demo = encoder.encode(AuthService.normalizar("demo"));
         u.setRespuestas(demo, demo, demo);

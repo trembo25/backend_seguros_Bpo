@@ -33,6 +33,11 @@ public class Usuario {
     @Column(nullable = false)
     private boolean activo = true;
 
+    @Column (nullable =  false)
+    @Setter 
+    private String estado = "PENDIENTE";
+
+
     @ManyToOne(optional = false, fetch = FetchType.EAGER)
     @JoinColumn(name = "id_rol")
     private Rol rol;

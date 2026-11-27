@@ -55,4 +55,20 @@ public class UsuarioController {
         }
         return auth.listarPorRol(rol);
     }
+    @GetMapping("/pendientes")
+    public List<UsuarioResponse> pendientes(@Parameter(hidden = true) @RequestHeader(value = "Authorization", required = false) String authorization) {
+        if (!"ANALISTA".equals(jwt.rolDesdeHeader(authorization))) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Solo un analista puede ver pendientes");
+        }
+        return auth.listarPendientes();
+    }
+
+    @PutMapping("/{id}/aprobar")
+    public UsuarioResponse aprobar(@Parameter(hidden = true) @RequestHeader(value = "Authorization", required = false) String authorization,
+                                   @PathVariable Long id) {
+        if (!"ANALISTA".equals(jwt.rolDesdeHeader(authorization))) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Solo un analista puede aprobar usuarios");
+        }
+        return auth.aprobarUsuario(id);
+    }
 }

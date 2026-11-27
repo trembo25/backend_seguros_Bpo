@@ -78,4 +78,19 @@ public class AnalistaController {
         tokens.exigirAnalista(auth);
         return servicio.asignar(auth, numero, r.idLiquidador());
     }
+
+    @Operation(summary = "Listar usuarios pendientes de aprobación")
+    @GetMapping("/usuarios/pendientes")
+    public List<UsuarioRemoto> usuariosPendientes(@Parameter(hidden = true) @RequestHeader(value = "Authorization", required = false) String auth) {
+        tokens.exigirAnalista(auth);
+        return servicio.usuariosPendientes(auth);
+    }
+
+    @Operation(summary = "Aprobar cuenta de un asegurado registrado")
+    @PutMapping("/usuarios/{id}/aprobar")
+    public UsuarioRemoto aprobarUsuario(@Parameter(hidden = true) @RequestHeader(value = "Authorization", required = false) String auth,
+                                        @PathVariable Long id) {
+        tokens.exigirAnalista(auth);
+        return servicio.aprobarUsuario(auth, id);
+    }
 }

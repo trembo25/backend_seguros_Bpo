@@ -129,4 +129,20 @@ public class AnalistaService {
             return new LiquidadorResumen(u.id(), u.nombre(), u.correo(), activos, suyos.size());
         }).toList();
     }
+
+    public List<UsuarioRemoto> usuariosPendientes(String authorization) {
+        try {
+            return auth.usuariosPendientes(authorization);
+        } catch (FeignException e) {
+            throw ErroresRemotos.traducir(e, "auth-service");
+        }
+    }
+
+    public UsuarioRemoto aprobarUsuario(String authorization, Long id) {
+        try {
+            return auth.aprobarUsuario(authorization, id);
+        } catch (FeignException e) {
+            throw ErroresRemotos.traducir(e, "auth-service");
+        }
+    }
 }
